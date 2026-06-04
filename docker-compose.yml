@@ -40,7 +40,7 @@ services:
         limits:
           memory: 768M
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/home').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/assets/home.svg').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3
