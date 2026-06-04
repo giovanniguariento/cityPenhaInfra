@@ -1,0 +1,98 @@
+name: Deploy to VPS
+
+on:
+  repository_dispatch:
+    types: [image-published]
+  workflow_dispatch:
+    inputs:
+      frontend_tag:
+        description: "Tag da imagem frontend (ex. latest ou sha-abc...)"
+        required: false
+        default: latest
+      backend_tag:
+        description: "Tag da imagem backend (ex. latest ou sha-abc...)"
+        required: false
+        default: latest
+      deploy_service:
+        description: "Serviço a atualizar (frontend, backend, both)"
+        required: false
+        default: both
+        type: choice
+        options:
+          - both
+          - frontend
+          - backend
+
+env:
+  FRONTEND_IMAGE_BASE: ghcr.io/giovanniguariento/citypenha-frontend
+  BACKEND_IMAGE_BASE: ghcr.io/giovanniguariento/citypenha-backend
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve image tags
+        id: tags
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            SERVICE="${{ github.event.client_payload.service }}"
+            IMAGE="${{ github.event.client_payload.image }}"
+            TAG="${{ github.event.client_payload.tag }}"
+            echo "dispatch_service=${SERVICE}" >> "$GITHUB_OUTPUT"
+            if [ "${SERVICE}" = "frontend" ]; then
+              echo "frontend_image=${IMAGE}:${TAG}" >> "$GITHUB_OUTPUT"
+              echo "deploy_frontend=true" >> "$GITHUB_OUTPUT"
+              echo "deploy_backend=false" >> "$GITHUB_OUTPUT"
+            elif [ "${SERVICE}" = "backend" ]; then
+              echo "backend_image=${IMAGE}:${TAG}" >> "$GITHUB_OUTPUT"
+              echo "deploy_frontend=false" >> "$GITHUB_OUTPUT"
+              echo "deploy_backend=true" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            FE_TAG="${{ inputs.frontend_tag }}"
+            BE_TAG="${{ inputs.backend_tag }}"
+            SVC="${{ inputs.deploy_service }}"
+            echo "frontend_image=${{ env.FRONTEND_IMAGE_BASE }}:${FE_TAG}" >> "$GITHUB_OUTPUT"
+            echo "backend_image=${{ env.BACKEND_IMAGE_BASE }}:${BE_TAG}" >> "$GITHUB_OUTPUT"
+            case "${SVC}" in
+              frontend) echo "deploy_frontend=true" >> "$GITHUB_OUTPUT"; echo "deploy_backend=false" >> "$GITHUB_OUTPUT" ;;
+              backend)  echo "deploy_frontend=false" >> "$GITHUB_OUTPUT"; echo "deploy_backend=true" >> "$GITHUB_OUTPUT" ;;
+              *)        echo "deploy_frontend=true" >> "$GITHUB_OUTPUT"; echo "deploy_backend=true" >> "$GITHUB_OUTPUT" ;;
+            esac
+          fi
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.VPS_DEPLOY_PATH }}"
+
+            DEPLOY_FE="${{ steps.tags.outputs.deploy_frontend }}"
+            DEPLOY_BE="${{ steps.tags.outputs.deploy_backend }}"
+
+            if [ "${DEPLOY_BE}" = "true" ]; then
+              export BACKEND_IMAGE="${{ steps.tags.outputs.backend_image }}"
+              if [ -z "${BACKEND_IMAGE}" ] || [ "${BACKEND_IMAGE}" = ":" ]; then
+                export BACKEND_IMAGE="${{ env.BACKEND_IMAGE_BASE }}:latest"
+              fi
+              echo "Pulling backend: ${BACKEND_IMAGE}"
+              docker compose pull backend
+              docker compose up -d backend
+            fi
+
+            if [ "${DEPLOY_FE}" = "true" ]; then
+              export FRONTEND_IMAGE="${{ steps.tags.outputs.frontend_image }}"
+              if [ -z "${FRONTEND_IMAGE}" ] || [ "${FRONTEND_IMAGE}" = ":" ]; then
+                export FRONTEND_IMAGE="${{ env.FRONTEND_IMAGE_BASE }}:latest"
+              fi
+              echo "Pulling frontend: ${FRONTEND_IMAGE}"
+              docker compose pull frontend
+              docker compose up -d frontend
+            fi
+
+            docker compose ps frontend backend
