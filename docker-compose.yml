@@ -31,13 +31,14 @@ services:
       - "4000"
     environment:
       PORT: 4000
+      NODE_OPTIONS: --max-old-space-size=512
     networks:
       - internal
     restart: unless-stopped
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 768M
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/home').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
