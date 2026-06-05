@@ -14,6 +14,9 @@ location / {
     proxy_pass http://frontend:4000;
 
     proxy_http_version 1.1;
+    proxy_read_timeout 15s;
+    proxy_connect_timeout 5s;
+    proxy_send_timeout 15s;
 
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;

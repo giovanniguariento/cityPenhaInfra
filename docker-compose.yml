@@ -31,14 +31,14 @@ services:
       - "4000"
     environment:
       PORT: 4000
-      NODE_OPTIONS: --max-old-space-size=256
+      NODE_OPTIONS: --max-old-space-size=512
     networks:
       - internal
     restart: unless-stopped
     deploy:
       resources:
         limits:
-          memory: 384M
+          memory: 768M
     healthcheck:
       test: ["CMD", "node", "healthcheck.mjs"]
       interval: 30s
