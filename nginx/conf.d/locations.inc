@@ -40,6 +40,10 @@ location /api/ {
     proxy_set_header X-Forwarded-Proto $scheme;
 }
 
+location = /blog/wp-admin {
+    return 301 $scheme://$host/blog/wp-admin/;
+}
+
 location /blog/wp-admin/ {
     proxy_pass http://wordpress-nginx:8080/wp-admin/;
     include /etc/nginx/conf.d/wordpress-proxy-headers.inc;

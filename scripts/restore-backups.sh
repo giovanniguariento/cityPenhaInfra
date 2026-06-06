@@ -140,8 +140,8 @@ check_prerequisites() {
         }
       done
     else
-      [[ -f "${BACKUPS_DIR}/backup_configs/wp-config.php" ]] || {
-        log_err "wp-config.php não encontrado em ${BACKUPS_DIR}/backup_configs/"
+      [[ -f "${INFRA_DIR}/wordpress/wp-config.php" ]] || {
+        log_err "wp-config.php não encontrado em ${INFRA_DIR}/wordpress/"
         exit 1
       }
       [[ -d "${BACKUPS_DIR}/backup_plugins/wp-content/plugins" ]] || {
@@ -272,6 +272,11 @@ restore_wordpress_files() {
   trap cleanup_temp RETURN
 
   log_info "Restaurando arquivos WordPress no volume ${wp_volume}..."
+  local infra_wp_config="${INFRA_DIR}/wordpress/wp-config.php"
+  [[ -f "$infra_wp_config" ]] || {
+    log_err "wp-config.php não encontrado em ${infra_wp_config}"
+    exit 1
+  }
 
   if [[ "$FROM_TAR" == true ]]; then
     log_info "Extraindo arquivos de .tar.gz..."
@@ -282,8 +287,9 @@ restore_wordpress_files() {
     docker run --rm \
       -v "${wp_volume}:/var/www/html" \
       -v "${source_dir}:/backups:ro" \
+      -v "${infra_wp_config}:/wp-config.php:ro" \
       alpine sh -c '
-        cp /backups/wp-config.php /var/www/html/wp-config.php
+        cp /wp-config.php /var/www/html/wp-config.php
         mkdir -p /var/www/html/wp-content/plugins /var/www/html/wp-content/uploads
         cp -a /backups/wp-content/plugins/. /var/www/html/wp-content/plugins/
         cp -a /backups/wp-content/uploads/. /var/www/html/wp-content/uploads/
@@ -293,8 +299,9 @@ restore_wordpress_files() {
     docker run --rm \
       -v "${wp_volume}:/var/www/html" \
       -v "${BACKUPS_DIR}:/backups:ro" \
+      -v "${infra_wp_config}:/wp-config.php:ro" \
       alpine sh -c '
-        cp /backups/backup_configs/wp-config.php /var/www/html/wp-config.php
+        cp /wp-config.php /var/www/html/wp-config.php
         mkdir -p /var/www/html/wp-content/plugins /var/www/html/wp-content/uploads
         cp -a /backups/backup_plugins/wp-content/plugins/. /var/www/html/wp-content/plugins/
         cp -a /backups/backup_uploads/wp-content/uploads/. /var/www/html/wp-content/uploads/

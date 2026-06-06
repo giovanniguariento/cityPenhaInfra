@@ -89,6 +89,7 @@ services:
       WORDPRESS_SITEURL: ${WORDPRESS_PUBLIC_URL:-http://localhost/blog}
     volumes:
       - wordpress_data:/var/www/html
+      - ./wordpress/wp-config.php:/var/www/html/wp-config.php:ro
     networks:
       - internal
     restart: unless-stopped
