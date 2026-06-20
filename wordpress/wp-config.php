@@ -164,9 +164,8 @@ if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strpos($_SERVER['HTTP_X_FORWARD
 }
 // (we include this by default because reverse proxying is extremely common in container environments)
 
-// Backend REST calls use http://wordpress-nginx:8080 (internal Docker). Without this,
-// Application Passwords are disabled because WP only enables them on HTTPS or localhost.
-define( 'WP_APPLICATION_PASSWORDS', true );
+// WP 6.8+ ignores WP_APPLICATION_PASSWORDS. Internal REST auth is enabled via
+// mu-plugin: wp-content/mu-plugins/00-enable-application-passwords.php
 
 if ($configExtra = getenv_docker('WORDPRESS_CONFIG_EXTRA', '')) {
 	eval($configExtra);

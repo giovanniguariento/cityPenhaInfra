@@ -90,6 +90,7 @@ services:
     volumes:
       - wordpress_data:/var/www/html
       - ./wordpress/wp-config.php:/var/www/html/wp-config.php:ro
+      - ./wordpress/mu-plugins:/var/www/html/wp-content/mu-plugins:ro
     networks:
       - internal
     restart: unless-stopped
