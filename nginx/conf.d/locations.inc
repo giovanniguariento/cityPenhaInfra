@@ -11,7 +11,8 @@ location = /wp-login.php {
 }
 
 location / {
-    proxy_pass http://frontend:4000;
+    set $frontend_upstream http://frontend:4000;
+    proxy_pass $frontend_upstream;
 
     proxy_http_version 1.1;
     proxy_read_timeout 15s;
@@ -30,9 +31,14 @@ location / {
 location /api/ {
     limit_req zone=api_limit burst=20 nodelay;
 
-    proxy_pass http://backend:3000/;
+    set $backend_upstream http://backend:3000;
+    rewrite ^/api/?(.*)$ /$1 break;
+    proxy_pass $backend_upstream;
 
     proxy_http_version 1.1;
+    proxy_connect_timeout 5s;
+    proxy_read_timeout 30s;
+    proxy_send_timeout 30s;
 
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
@@ -56,6 +62,11 @@ location /blog/wp-login.php {
     include /etc/nginx/conf.d/wordpress-proxy-headers.inc;
 }
 
+location = /blog/wp-cron.php {
+    proxy_pass http://wordpress-nginx:8080/wp-cron.php;
+    include /etc/nginx/conf.d/wordpress-proxy-headers.inc;
+}
+
 location /blog/wp-includes/ {
     proxy_pass http://wordpress-nginx:8080/wp-includes/;
     include /etc/nginx/conf.d/wordpress-proxy-headers.inc;
@@ -71,6 +82,11 @@ location /blog/wp-content/uploads/ {
 
 location /blog/wp-content/ {
     proxy_pass http://wordpress-nginx:8080/wp-content/;
+    include /etc/nginx/conf.d/wordpress-proxy-headers.inc;
+}
+
+location /blog/wp-json/ {
+    proxy_pass http://wordpress-nginx:8080/wp-json/;
     include /etc/nginx/conf.d/wordpress-proxy-headers.inc;
 }
 
