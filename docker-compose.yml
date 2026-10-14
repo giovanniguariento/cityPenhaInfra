@@ -91,6 +91,7 @@ services:
       - wordpress_data:/var/www/html
       - ./wordpress/wp-config.php:/var/www/html/wp-config.php:ro
       - ./wordpress/mu-plugins:/var/www/html/wp-content/mu-plugins:ro
+      - ./wordpress/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini:ro
     networks:
       - internal
     restart: unless-stopped
